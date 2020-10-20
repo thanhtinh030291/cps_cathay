@@ -723,7 +723,26 @@ class Payments_model extends CI_Model {
         $this->db->join('sys_transfer_status sys', 'sys.TF_STATUS_ID = payments.TF_STATUS_ID');
         $this->db->join('sheets', 'sheets.SHEET_ID = payments.SHEET_ID', 'left');
         $this->db->join('banker', 'payments.PAYM_ID = banker.PAYM_ID', 'left');
-        $this->db->join('(SELECT `renew_claim`.`PAYM_ID`, (FIRST_VALUE(`REASON`) OVER(PARTITION BY `renew_claim`.`PAYM_ID`)) AS REASON FROM `renew_claim` WHERE 1 GROUP BY PAYM_ID) AS renew_claim_new', 'payments.PAYM_ID = renew_claim_new.PAYM_ID', 'left');
+        $this->db->join('(
+                    SELECT
+                        `renew_claim`.`PAYM_ID`,
+                        `renew_claim`.`REASON`
+                    FROM
+                        `renew_claim`
+                    JOIN(
+                        SELECT
+                            `renew_claim`.`PAYM_ID`,
+                            MAX(`renew_claim`.`UPD_DATE`) `UPD_DATE`
+                        FROM
+                            renew_claim
+                        GROUP BY
+                            `renew_claim`.`PAYM_ID`
+                    ) AS lt
+                WHERE
+                    `renew_claim`.`PAYM_ID` = lt.`PAYM_ID` AND `renew_claim`.`UPD_DATE` = lt.`UPD_DATE`
+                GROUP BY
+                    PAYM_ID
+                ) AS renew_claim_new', 'payments.PAYM_ID = renew_claim_new.PAYM_ID', 'left');
         foreach ($condition as $key => $val)
         {
             $this->db->where($key, $val);
